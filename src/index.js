@@ -1,6 +1,7 @@
 // 引入组件
 import VGraphin from './index.vue'
 import ContextMenu from "./components/ContextMenu/index.js"
+import Tooltip from "./components/Tooltip/index.js"
 
 import registerGraphinForce from './layout/inner/registerGraphinForce';
 import registerPresetLayout from './layout/inner/registerPresetLayout';
@@ -8,7 +9,8 @@ import { registerGraphinCircle, registerGraphinLine } from './shape';
 // install 是默认的方法。当外界在 use 这个组件的时候，就会调用本身的 install 方法，同时传一个 Vue 这个类的参数。
 const components = [
   VGraphin,
-  ContextMenu
+  ContextMenu,
+  Tooltip
 ]
 const install = function (Vue) {
   components.forEach(component => {
