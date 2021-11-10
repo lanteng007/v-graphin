@@ -2,6 +2,7 @@
 import VGraphin from './index.vue'
 import ContextMenu from "./components/ContextMenu/index.js"
 import Tooltip from "./components/Tooltip/index.js"
+import Toolbar from "./components/Toolbar/index.js"
 
 import registerGraphinForce from './layout/inner/registerGraphinForce';
 import registerPresetLayout from './layout/inner/registerPresetLayout';
@@ -10,7 +11,8 @@ import { registerGraphinCircle, registerGraphinLine } from './shape';
 const components = [
   VGraphin,
   ContextMenu,
-  Tooltip
+  Tooltip,
+  Toolbar
 ]
 const install = function (Vue) {
   components.forEach(component => {
