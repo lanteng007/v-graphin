@@ -22,7 +22,7 @@
           {{ option.name }}
         </li>
       </template>
-      <slot v-else></slot>
+      <slot v-else :item="item"></slot>
     </ul>
   </div>
 </template>
@@ -63,7 +63,6 @@ export default {
   },
   methods: {
     handleShow(e) {
-      console.log(e.item)
       e.preventDefault();
       e.stopPropagation();
       const width = this.graph.get("width");
