@@ -24,11 +24,13 @@ yarn-error.log*
 # 以下是新增的
 # 要忽略目录和指定文件
 package-lock.json
-examples/
-packages/
-public/
+examples
+packages
+public
 src/
 vue.config.js
 babel.config.js
 *.map
 *.html
+# Optional npm cache directory
+.npm
