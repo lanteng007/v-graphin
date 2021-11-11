@@ -1,6 +1,6 @@
 {
   "name": "v-graphin",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "description": "Graphin的vue实现",
   "main": "lib/index.umd.min.js",

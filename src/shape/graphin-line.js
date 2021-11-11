@@ -3,7 +3,7 @@
 import G6 from '@antv/g6';
 import { deepMix } from '@antv/util';
 import { getDefaultStyleByTheme } from '../theme';
-import { setStatusStyle } from './utils';
+import { convertSizeToWH, setStatusStyle } from './utils';
 
 const getStyleByTheme = (theme = {}) => {
   const themeResult = getDefaultStyleByTheme(theme);
@@ -13,7 +13,7 @@ const getStyleByTheme = (theme = {}) => {
     status: defaultEdgeStatusStyle.status,
   };
 };
-export function removeDumpAttrs(attrs) {
+function removeDumpAttrs(attrs) {
   Object.keys(attrs).forEach(key => {
     if (attrs[key] === undefined) {
       delete attrs[key];
@@ -21,7 +21,7 @@ export function removeDumpAttrs(attrs) {
   });
   return attrs;
 }
-export function parseLabel(json) {
+function parseLabel(json) {
   const { value, ...others } = json;
   const attrs = {
     id: 'label',
@@ -31,7 +31,7 @@ export function parseLabel(json) {
   return removeDumpAttrs(attrs);
 }
 
-export function parseKeyShape(json) {
+function parseKeyShape(json) {
   const { ...others } = json;
   const attrs = {
     id: 'keyshape',
@@ -40,13 +40,72 @@ export function parseKeyShape(json) {
   return removeDumpAttrs(attrs);
 }
 
-export function parseHalo(json) {
+function parseHalo(json) {
   const { ...others } = json;
   const attrs = {
     id: 'halo',
     ...others,
   };
   return removeDumpAttrs(attrs);
+}
+
+function parseIcon(style) {
+  const { icon } = style;
+
+  const {
+    value = '',
+    type,
+    fontFamily,
+    // @ts-ignore
+    textAlign = 'center',
+    // @ts-ignore
+    textBaseline = 'middle',
+    fill,
+    size,
+    visible,
+    // eslint-disable-next-line no-unused-vars
+    clip, // clip字段是保留的，放入attrs中会引起报错
+    ...otherAttrs
+  } = icon;
+
+  const [width, height] = convertSizeToWH(size);
+
+  const params = {
+    name: 'icon',
+    visible: visible !== false,
+    capture: false,
+  };
+
+  if (type === 'text' || type === 'font') {
+    return {
+      ...params,
+      attrs: {
+        x: 0,
+        y: 0,
+        textAlign,
+        textBaseline,
+        text: value,
+        fontSize: width,
+        fontFamily,
+        fill,
+        visible: visible !== false,
+        ...otherAttrs,
+      },
+    };
+  }
+  // image
+  return {
+    ...params,
+    attrs: {
+      x: -width / 2,
+      y: -height / 2,
+      img: value,
+      width,
+      height,
+      visible: visible !== false,
+      ...otherAttrs,
+    },
+  };
 }
 
 const parseAttr = (style, itemShapeName) => {
@@ -58,6 +117,9 @@ const parseAttr = (style, itemShapeName) => {
   }
   if (itemShapeName === 'label') {
     return parseLabel(style.label || {});
+  }
+  if (itemShapeName === 'icon') {
+    return parseIcon(style).attrs;
   }
   return {};
 };
@@ -90,7 +152,7 @@ const processKeyshape = (cfg, style) => {
   const target = targetNode ? targetNode.get('model') : { id: 'temp' };
 
   if (type === 'loop' || source.id === target.id) {
-    const nodeSize = source.style && source.style.keyshape  ? source.style.keyshape.size : 26;
+    const nodeSize = source.style && source.style.keyshape ? source.style.keyshape.size : 26;
     const { distance, dx, rx, ry } = {
       // 默认是是节点的高度
       distance: 0,
@@ -157,11 +219,11 @@ export default () => {
 
       const { startPoint = { x: 0, y: 0 }, endPoint = { x: 0, y: 0 }, sourceNode, targetNode } = cfg;
 
-      const { label, halo, keyshape: keyShapeStyle } = style;
+      const { label, halo, keyshape: keyShapeStyle, icon } = style;
       /** 计算目标节点的大小 */
       const source = sourceNode.get('model');
       const target = targetNode ? targetNode.get('model') : { id: 'temp' };
-      const nodeSize = source.style && source.style.keyshape  ? source.style.keyshape.size : 28;
+      const nodeSize = source.style && source.style.keyshape ? source.style.keyshape.size : 28;
       /** 计算是否为loop */
       const isLoop = keyShapeStyle ? keyShapeStyle.type === 'loop' : source.id === target.id;
       const hasLabel = label.value;
@@ -174,6 +236,7 @@ export default () => {
 
       const path = processKeyshape(cfg, style);
 
+      const hasIcon = !!icon
       // TODO:支持多边
       // const path = [
       //   ['M', startPoint.x, startPoint.y],
@@ -181,7 +244,7 @@ export default () => {
       // ];
 
       /** 光环 */
-      (group).addShape('path', {
+      group.addShape('path', {
         attrs: {
           id: 'halo',
           path,
@@ -203,10 +266,10 @@ export default () => {
           endArrow: isLoop
             ? undefined
             : {
-                d: 0,
-                path: `M 0,0 L ${d},${d / 2} L ${d},-${d / 2} Z`,
-                fill: keyShapeStyle.stroke,
-              },
+              d: 0,
+              path: `M 0,0 L ${d},${d / 2} L ${d},-${d / 2} Z`,
+              fill: keyShapeStyle.stroke,
+            },
           ...keyShapeStyle,
         },
         draggable: true,
@@ -214,10 +277,7 @@ export default () => {
       });
 
       /** 标签 */
-      if (hasLabel) {
-        const { value, fontSize = 8, offset = [0, 0], background, ...others } = label;
-        const hasBackground = Boolean(background);
-        const [offsetX, offsetY] = offset;
+      if (hasLabel || hasIcon) {
         /** 计算标签和标签背景的旋转角度 */
         let degree = Math.atan((endPoint.y - startPoint.y) / (endPoint.x - startPoint.x));
         /** 计算标签和标签背景的位移位置 */
@@ -233,65 +293,140 @@ export default () => {
         if (isLoop) {
           degree = 2 * Math.PI;
         }
+        if (hasLabel) {
+          const { value, fontSize = 8, offset = [0, 0], background, ...others } = label;
+          const hasBackground = Boolean(background);
+          const [offsetX, offsetY] = offset;
+          /** 设置标签的背景 */
+          if (hasBackground) {
+            const calcWidth = String(value).length * fontSize * 0.6;
+            const calcHeight = fontSize * 1.8;
+            const defaultBackground = {
+              fill: '#fff',
+              width: calcWidth,
+              height: calcHeight,
+              stroke: keyShapeStyle.stroke,
+              lineWidth: 1,
+              radius: 6,
+            };
 
-        /** 设置标签的背景 */
-        if (hasBackground) {
-          const calcWidth = String(value).length * fontSize * 0.6;
-          const calcHeight = fontSize * 1.8;
-          const defaultBackground = {
-            fill: '#fff',
-            width: calcWidth,
-            height: calcHeight,
-            stroke: keyShapeStyle.stroke,
-            lineWidth: 1,
-            radius: 6,
-          };
+            const { fill, width, height, stroke, ...otherBackgroundAttrs } = { ...defaultBackground, ...background };
+            const labelBackgroundShape = group.addShape('rect', {
+              attrs: {
+                id: 'label-background',
+                x: -width / 2,
+                y: -height / 2,
+                width,
+                height,
+                fill,
+                stroke,
+                ...otherBackgroundAttrs,
+              },
+              draggable: true,
+              name: 'label-background',
+            });
 
-          const { fill, width, height, stroke, ...otherBackgroundAttrs } = { ...defaultBackground, ...background };
-          const labelBackgroundShape = group.addShape('rect', {
+            /** 处理标签自动旋转问题 */
+            labelBackgroundShape.rotate(degree);
+            labelBackgroundShape.translate(midPosition[0], midPosition[1]);
+          }
+
+          /** 设置标签的文本 */
+          let y = offsetY - fontSize / 2;
+          if (isLoop) {
+            y = offsetY - nodeSize * 1.6 - (keyShapeStyle && keyShapeStyle.loop ? keyShapeStyle.loop.distance : 0) * 2;
+          }
+          if (hasBackground) {
+            y = offsetY + fontSize / 2;
+          }
+          const labelShape = group.addShape('text', {
             attrs: {
-              id: 'label-background',
-              x: -width / 2,
-              y: -height / 2,
-              width,
-              height,
-              fill,
-              stroke,
-              ...otherBackgroundAttrs,
+              id: 'label',
+              x: offsetX,
+              y,
+              text: value,
+              fontSize,
+              ...others,
             },
             draggable: true,
-            name: 'label-background',
+            name: 'label',
           });
-
           /** 处理标签自动旋转问题 */
-          labelBackgroundShape.rotate(degree);
-          labelBackgroundShape.translate(midPosition[0], midPosition[1]);
+          labelShape.rotate(degree);
+          labelShape.translate(midPosition[0], midPosition[1]);
         }
+        if (hasIcon) {
+          const { type, size, background } = icon
+          const hasBackground = Boolean(background);
+          /** 设置字体图标的背景 */
+          if (hasBackground) {
+            const calcWidth = size;
+            const calcHeight = size;
+            const { padding = 12 } = background
+            const defaultBackground = {
+              fill: '#fff',
+              width: calcWidth + padding,
+              height: calcHeight + + padding,
+              stroke: keyShapeStyle.stroke,
+              lineWidth: 1,
+              radius: (size + padding)/2,
+            };
+            const { fill, width, height, stroke, ...otherBackgroundAttrs } = { ...defaultBackground, ...background };
+            const labelBackgroundShape = group.addShape('rect', {
+              attrs: {
+                id: 'label-background',
+                x: -width / 2,
+                y: -height / 2,
+                width,
+                height,
+                fill,
+                stroke,
+                ...otherBackgroundAttrs,
+              },
+              draggable: true,
+              name: 'label-background',
+            });
 
-        /** 设置标签的文本 */
-        let y = offsetY - fontSize / 2;
-        if (isLoop) {
-          y = offsetY - nodeSize * 1.6 - (keyShapeStyle && keyShapeStyle.loop ? keyShapeStyle.loop.distance : 0) * 2;
+            /** 处理标签自动旋转问题 */
+            labelBackgroundShape.rotate(degree);
+            labelBackgroundShape.translate(midPosition[0], midPosition[1]);
+          }
+          /** 设置字体图标 */
+          let iconShape = null
+          if (type === 'font') {
+            const iconConfig = parseIcon(style)
+            const option = {
+              ...iconConfig
+            }
+            iconShape = group.addShape('text', option);
+          }
+          if (type === 'image') {
+            const imageAttrs = parseIcon(style);
+            const option = {
+              ...imageAttrs
+            }
+            iconShape = group.addShape('image', option);
+            const { clip } = style.icon;
+            if (clip) {
+              const { r, ...clipStyle } = clip;
+              imageShape.setClip({
+                type: 'circle',
+                attrs: {
+                  x: 0,
+                  y: 0,
+                  r,
+                  ...clipStyle,
+                },
+              });
+            }
+          }
+          /** 处理标签自动旋转问题 */
+          iconShape.rotate(degree);
+          iconShape.translate(midPosition[0], midPosition[1]);
         }
-        if (hasBackground) {
-          y = offsetY + fontSize / 2;
-        }
-        const labelShape = group.addShape('text', {
-          attrs: {
-            id: 'label',
-            x: offsetX,
-            y,
-            text: value,
-            fontSize,
-            ...others,
-          },
-          draggable: true,
-          name: 'label',
-        });
-        /** 处理标签自动旋转问题 */
-        labelShape.rotate(degree);
-        labelShape.translate(midPosition[0], midPosition[1]);
       }
+
+
       return key;
     },
     setState(
