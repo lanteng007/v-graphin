@@ -14,6 +14,9 @@
       <ClickSelect />
       <!-- 圈选节点 -->
       <BrushSelect />
+      <!-- 窗口变化 -->
+      <ResizeCanvas />
+      <!-- 显示自适应 -->
       <slot></slot>
     </div>
   </div>
@@ -33,14 +36,20 @@ import LayoutController from "./layout";
 import { getDefaultStyleByTheme } from "./theme/index";
 import deepEqual from "./utils/deepEqual";
 
-// const { DragCanvas, ZoomCanvas, DragNode, DragCombo, ClickSelect, BrushSelect, ResizeCanvas, Hoverable } = Behaviors;
+const { DragCanvas, ZoomCanvas, DragNode, DragCombo, ClickSelect, BrushSelect, ResizeCanvas } = Behaviors;
 
 
 export default {
   name: "VGraphin",
   componentName: "VGraphin",
   components: {
-    ...Behaviors
+    DragCanvas,
+    ZoomCanvas,
+    DragNode,
+    DragCombo,
+    ClickSelect,
+    BrushSelect,
+    ResizeCanvas,
   },
   provide() {
     return {
@@ -54,11 +63,23 @@ export default {
     };
   },
   props: {
+    theme: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
     data: {
       type: Object,
       default() {
         return {};
       },
+    },
+    layout: {
+      type: Object,
+      default() {
+        return {}
+      }
     },
     width: {
       type: Number,
@@ -68,16 +89,66 @@ export default {
       type: Number,
       default: null,
     },
+    defaultCombo: {
+      type: Object,
+      default() {
+        return { style: {}, type: "graphin-combo" }
+      }
+    },
+    defaultEdge: {
+      type: Object,
+      default() {
+        return { style: {}, type: "graphin-line" }
+      }
+    },
+    defaultNode: {
+      type: Object,
+      default() {
+        return { style: {}, type: "graphin-circle" }
+      }
+    },
+    nodeStateStyles: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
+    edgeStateStyles: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
+    comboStateStyles: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
+    modes: {
+      type: [Object,Array],
+      default() {
+        return { default: [] }
+      }
+    },
+    animate: {
+      type: Boolean,
+      default: true
+    },
+    handleAfterLayout: {
+      type: Function,
+      default: null
+    }
   },
   data() {
     return {
       graph: null,
       graphDOM: null,
-      layout: {},
+      curlayout: {},
       layoutCache: false,
       isTree: false,
       graphData: null,
-      theme: {},
+      curtheme: {},
       options: {},
       apis: {},
       isReady: false,
@@ -112,7 +183,7 @@ export default {
       /** 数据变化 */
       if (isDataChange) {
         this.initData(newValue);
-        this.layout.changeLayout();
+        this.curlayout.changeLayout();
         this.graph.data(this.graphData);
         this.graph.changeData(this.graphData);
         this.initStatus();
@@ -126,7 +197,7 @@ export default {
       /** 布局变化 */
       if (isLayoutChange) {
         if (this.isTree) {
-          this.graph.updateLayout(this.layout);
+          this.graph.updateLayout(this.curlayout);
           return;
         }
         /**
@@ -137,9 +208,9 @@ export default {
          */
         /** 数据需要从画布中来 */
         // @ts-ignore
-        this.graphData = this.layout.getDataFromGraph();
-        this.layout.changeLayout();
-        this.layout.refreshPosition();
+        this.graphData = this.curlayout.getDataFromGraph();
+        this.curlayout.changeLayout();
+        this.curlayout.refreshPosition();
 
         /** 走G6的layoutController */
         // this.graph.updateLayout();
@@ -166,13 +237,13 @@ export default {
         layout,
         width,
         height,
-        defaultCombo = { style: {}, type: "graphin-combo" },
-        defaultEdge = { style: {}, type: "graphin-line" },
-        defaultNode = { style: {}, type: "graphin-circle" },
+        defaultCombo,
+        defaultEdge,
+        defaultNode,
         nodeStateStyles,
         edgeStateStyles,
         comboStateStyles,
-        modes = { default: [] },
+        modes,
         animate,
         handleAfterLayout,
         ...otherOptions
@@ -217,7 +288,7 @@ export default {
         edgeStateStyles, // isGraphinEdgeType ? deepMix({}, defaultEdgeStatusStyle, edgeStateStyles) : edgeStateStyles,
         comboStateStyles, // deepMix({}, defaultComboStatusStyle, comboStateStyles),
       };
-      this.theme = { ...finalStyle, ...otherTheme };
+      this.curtheme = { ...finalStyle, ...otherTheme };
       /** graph type */
       this.isTree =
         Boolean(data.children) ||
@@ -248,8 +319,8 @@ export default {
       this.graph.data(this.graphData);
       /** 初始化布局：仅限网图 */
       if (!this.isTree) {
-        this.layout = new LayoutController(this);
-        this.layout.start();
+        this.curlayout = new LayoutController(this);
+        this.curlayout.start();
       }
 
       // this.graph.get('canvas').set('localRefresh', true);
@@ -296,7 +367,7 @@ export default {
     },
     /** 布局更新 */
     updateLayout() {
-      this.layout.changeLayout();
+      this.curlayout.changeLayout();
     },
     /**
      * 组件更新的时候
@@ -307,10 +378,10 @@ export default {
       return options;
     },
     clear() {
-      if (this.layout && this.layout.destroy) {
-        this.layout.destroy(); // tree graph
+      if (this.curlayout && this.curlayout.destroy) {
+        this.curlayout.destroy(); // tree graph
       }
-      this.layout = {};
+      this.curlayout = {};
       if (this.graph) {
         this.graph.clear();
       }
@@ -327,9 +398,9 @@ export default {
     setGraphin() {
       this.graphin = {
         graph: this.graph,
-        layout: this.layout,
+        layout: this.curlayout,
         apis: this.apis,
-        theme: this.theme,
+        theme: this.curtheme,
         graphDOM: this.graphDOM
       }
     }
