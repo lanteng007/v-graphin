@@ -4,9 +4,9 @@ import ClickSelect from './ClickSelect';
 import DragCanvas from './DragCanvas';
 import DragCombo from './DragCombo';
 import DragNode from './DragNode';
-// import DragNodeWithForce from './DragNodeWithForce';
-// import FitView from './FitView';
-// import FontPaint from './FontPaint';
+import DragNodeWithForce from './DragNodeWithForce';
+import FitView from './FitView';
+import FontPaint from './FontPaint';
 // import Hoverable from './Hoverable';
 import LassoSelect from './LassoSelect';
 import ResizeCanvas from './ResizeCanvas';
@@ -27,8 +27,8 @@ export default {
   /** 可选 */
   ActivateRelations,
   // TreeCollapse,
-  // FitView,
-  // FontPaint,
-  // DragNodeWithForce,
+  FitView,
+  FontPaint,
+  DragNodeWithForce,
   // Hoverable,
 };
