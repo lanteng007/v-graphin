@@ -246,7 +246,6 @@ export default {
         modes,
         animate,
         handleAfterLayout,
-        ...otherOptions
       } = this;
       if (modes.default.length > 0) {
         // TODO :给用户正确的引导，推荐使用Graphin的Behaviors组件
@@ -301,13 +300,12 @@ export default {
         animate: animate !== false,
         ...finalStyle,
         modes,
-        ...otherOptions,
       };
       if (this.isTree) {
         this.options.layout = layout || DEFAULT_TREE_LATOUT_OPTIONS;
-        this.graph = new G6.TreeGraph(this.options);
+        this.graph = new G6.TreeGraph({...this.options});
       } else {
-        this.graph = new G6.Graph(this.options);
+        this.graph = new G6.Graph({...this.options});
       }
       /** 内置事件:AfterLayout 回调 */
       this.graph.on("afterlayout", () => {
