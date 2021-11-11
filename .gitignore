@@ -23,4 +23,5 @@ pnpm-debug.log*
 *.sw?
 package-lock.json
 examples
+lib
 .npmrc
