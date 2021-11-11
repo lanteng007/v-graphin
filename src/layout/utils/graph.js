@@ -1,5 +1,5 @@
 const getDegree = (node, edges) => {
-  const nodeId = node.data.id;
+  const nodeId = node.id;
   let degree = 0;
   let sDegree = 0;
   let tDegree = 0;
