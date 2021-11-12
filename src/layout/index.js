@@ -39,8 +39,8 @@ class LayoutController {
   // 是否每个节点都有位置信息
   hasPosition() {
     const { graphin } = this;
-    const { data = {} } = graphin;
-    return data.nodes.every(node => !window.isNaN(Number(node.x)) && !window.isNaN(Number(node.y)));
+    const { graphData = {} } = graphin;
+    return graphData.nodes.every(node => !window.isNaN(Number(node.x)) && !window.isNaN(Number(node.y)));
   }
 
   /**
@@ -50,7 +50,7 @@ class LayoutController {
     /** 更新布局参数 */
     this.updateOptions();
     const { options, graphin } = this;
-    const { data } = graphin;
+    const { graphData } = graphin;
     const { type } = options;
 
     /** 力导布局特殊处理 */
@@ -63,7 +63,7 @@ class LayoutController {
     this.graph.emit('beforelayout');
 
     this.instance = new LayoutClass(this.options);
-    this.instance.init(data);
+    this.instance.init(graphData);
   }
 
   /** 启动布局 */
@@ -74,13 +74,13 @@ class LayoutController {
 
   /** 重新布局 */
   changeLayout() {
-    const { graph, data, isTree, layoutCache } = this.graphin;
+    const { graph, graphData, isTree, layoutCache } = this.graphin;
     if (
       !graph ||
       graph.destroyed ||
-      !data ||
-      !data.nodes ||
-      !data.nodes.length ||
+      !graphData ||
+      !graphData.nodes ||
+      !graphData.nodes.length ||
       (layoutCache && this.hasPosition()) ||
       isTree
     ) {
@@ -122,7 +122,7 @@ class LayoutController {
       ...layout,
     };
 
-    if (isEmpty(this.graphin.data)) {
+    if (isEmpty(this.graphin.graphData)) {
       this.prevOptions = {};
       return;
     }
@@ -135,7 +135,7 @@ class LayoutController {
         // 用户给的preset.type是第一优先级
         presetType = preset.type;
       }
-      if (isEmpty(this.graphin.data)) {
+      if (isEmpty(this.graphin.graphData)) {
         // 特殊场景处理，不带preset的力导，第二次渲染
         presetType = preset.type || 'grid';
       }
@@ -187,7 +187,7 @@ class LayoutController {
       current: FORCE_LAYOUTS.indexOf(this.options.type) !== -1,
     };
     const isSameLayoutType = this.options.type === this.prevOptions.type;
-    if (isEmpty(graphin.data)) {
+    if (isEmpty(graphin.graphData)) {
       return;
     }
 
@@ -199,9 +199,9 @@ class LayoutController {
 
       const { preset } = this.options;
       this.presetLayout = new G6.Layout[preset.type]({ ...preset } || {});
-      this.presetLayout.init(graphin.data);
+      this.presetLayout.init(graphin.graphData);
       this.presetLayout.execute();
-      this.presetLayout.data = { ...graphin.data };
+      this.presetLayout.graphData = { ...graphin.graphData };
     }
 
     if (isForceLayout.current && isForceLayout.prev) {
@@ -214,11 +214,11 @@ class LayoutController {
       if (isEmpty(prevData)) {
         // preset.type = 'grid';
         this.presetLayout = new G6.Layout[preset.type]({ ...preset } || {});
-        this.presetLayout.init(graphin.data);
+        this.presetLayout.init(graphin.graphData);
         this.presetLayout.execute();
-        prevData = graphin.data;
+        prevData = graphin.graphData;
       }
-      graphin.data = Tweak(graphin.data, prevData);
+      graphin.graphData = Tweak(graphin.graphData, prevData);
     }
 
     /** 布局切换 */
