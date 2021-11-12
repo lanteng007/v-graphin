@@ -53,12 +53,10 @@ export default {
   },
   provide() {
     return {
-      graphin: () => this.graphin,
-      setGraphinProperty: (property) => {
-        this.graphin = {
-          ...this.graphin,
-          ...property
-        }
+      graphin: this,
+      setGraphinProperty: (property, value) => {
+        this[property] = value
+        this.graphin[property] = value
       }
     };
   },
@@ -81,76 +79,26 @@ export default {
         return {}
       }
     },
-    width: {
-      type: Number,
-      default: null,
-    },
-    height: {
-      type: Number,
-      default: null,
-    },
-    defaultCombo: {
-      type: Object,
-      default() {
-        return { style: {}, type: "graphin-combo" }
-      }
-    },
-    defaultEdge: {
-      type: Object,
-      default() {
-        return { style: {}, type: "graphin-line" }
-      }
-    },
-    defaultNode: {
-      type: Object,
-      default() {
-        return { style: {}, type: "graphin-circle" }
-      }
-    },
-    nodeStateStyles: {
+    defaultOptions: {
       type: Object,
       default() {
         return {}
       }
     },
-    edgeStateStyles: {
-      type: Object,
-      default() {
-        return {}
-      }
-    },
-    comboStateStyles: {
-      type: Object,
-      default() {
-        return {}
-      }
-    },
-    modes: {
-      type: [Object,Array],
-      default() {
-        return { default: [] }
-      }
-    },
-    animate: {
-      type: Boolean,
-      default: true
-    },
-    handleAfterLayout: {
-      type: Function,
-      default: null
-    }
   },
   data() {
     return {
-      graph: null,
       graphDOM: null,
+      graph: null,
       curlayout: {},
       layoutCache: false,
+      width: null,
+      height: null,
       isTree: false,
       graphData: null,
-      curtheme: {},
       options: {},
       apis: {},
+      curtheme: {},
       isReady: false,
       graphin: {
         graph: null,
@@ -232,21 +180,23 @@ export default {
   methods: {
     initGraphInstance() {
       const {
-        theme,
-        data,
-        layout,
         width,
         height,
-        defaultCombo,
-        defaultEdge,
-        defaultNode,
+        defaultCombo = { style: {}, type: 'graphin-combo' },
+        defaultEdge = { style: {}, type: 'graphin-line' },
+        defaultNode = { style: {}, type: 'graphin-circle' },
         nodeStateStyles,
         edgeStateStyles,
         comboStateStyles,
-        modes,
+        modes = { default: [] },
         animate,
         handleAfterLayout,
-      } = this;
+        ...otherOptions
+      } = this.defaultOptions;
+      const theme = this.theme
+      const data = this.data
+      const layout = this.layout
+
       if (modes.default.length > 0) {
         // TODO :给用户正确的引导，推荐使用Graphin的Behaviors组件
         console.info(
@@ -258,6 +208,9 @@ export default {
       const { clientWidth, clientHeight } = this.graphDOM;
       /** shallow clone */
       this.initData(data);
+      /** 重新计算宽度 */
+      this.width = Number(width) || clientWidth || 500;
+      this.height = Number(height) || clientHeight || 500;
       const themeResult = getDefaultStyleByTheme(theme);
 
       const {
@@ -295,11 +248,12 @@ export default {
       this.options = {
         container: this.graphDOM,
         renderer: "canvas",
-        width: Number(width) || clientWidth || 500,
-        height: Number(height) || clientHeight || 500,
+        width: this.width,
+        height: this.height,
         animate: animate !== false,
         ...finalStyle,
         modes,
+        ...otherOptions
       };
       if (this.isTree) {
         this.options.layout = layout || DEFAULT_TREE_LATOUT_OPTIONS;

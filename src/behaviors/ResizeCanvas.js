@@ -5,10 +5,10 @@ export default {
   inject: ['graphin'],
   computed: {
     graph() {
-      return this.graphin().graph || {}
+      return this.graphin.graph || {}
     },
     graphDOM() {
-      return this.graphin().graphDOM || {}
+      return this.graphin.graphDOM || {}
     }
   },
   created() {

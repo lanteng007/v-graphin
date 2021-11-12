@@ -58,7 +58,7 @@ export default {
   },
   computed: {
     graph() {
-      return this.graphin().graph || {}
+      return this.graphin.graph || {}
     }
   },
   created() {
