@@ -23,7 +23,7 @@ export default {
       return this.graphin.graph || {}
     },
     layout() {
-      return this.graphin().layout || {}
+      return this.graphin.curlayout || {}
     },
   },
   methods: {
