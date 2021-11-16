@@ -47,3 +47,7 @@ export {
   registerBehavior,
   registerFontFamily
 }
+export {
+  /** export G6 */
+  default as G6,
+} from "@antv/g6"
