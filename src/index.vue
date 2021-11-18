@@ -19,6 +19,13 @@
       <!-- 显示自适应 -->
       <slot></slot>
     </div>
+    <div class="loading-mask" v-if="loading">
+      <div class="loading-spinner">
+        <svg viewBox="25 25 50 50" class="circular">
+          <circle cx="50" cy="50" r="20" fill="none" class="path"></circle>
+        </svg>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -61,6 +68,10 @@ export default {
     };
   },
   props: {
+    loading: {
+      type: Boolean,
+      default: false
+    },
     theme: {
       type: Object,
       default() {
@@ -369,6 +380,56 @@ export default {
     height: 100%;
     min-height: 500px;
     background: #f2f2f2;
+  }
+  .loading-mask  {
+    position: absolute;
+    z-index: 2000;
+    background-color: rgba(151, 150, 150, 0.5);
+    margin: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transition: opacity .3s;
+    .loading-spinner {
+      top: 50%;
+      margin-top: -41px;
+      width: 100%;
+      text-align: center;
+      position: absolute;
+      .circular {
+        height: 82px;
+        width: 82px;
+        animation: loading-rotate 2s linear infinite;
+      }
+      .path {
+        animation: loading-dash 1.5s ease-in-out infinite;
+        stroke-dasharray: 90,150;
+        stroke-dashoffset: 0;
+        stroke-width: 4;
+        stroke: #409eff;
+        stroke-linecap: round;
+      }
+    }
+  }
+}
+@keyframes loading-rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@keyframes loading-dash {
+  0% {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -40px;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -120px;
   }
 }
 </style>
