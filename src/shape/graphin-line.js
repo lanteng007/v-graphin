@@ -314,8 +314,8 @@ export default () => {
             const labelBackgroundShape = group.addShape('rect', {
               attrs: {
                 id: 'label-background',
-                x: -width / 2,
-                y: -height / 2,
+                x: -width / 2 + offsetX,
+                y: -height / 2 + offsetY,
                 width,
                 height,
                 fill,
@@ -358,6 +358,7 @@ export default () => {
         if (hasIcon) {
           const { type, size, background } = icon
           const hasBackground = Boolean(background);
+          const [offsetX, offsetY] = offset;
           /** 设置字体图标的背景 */
           if (hasBackground) {
             const calcWidth = size;
@@ -372,11 +373,11 @@ export default () => {
               radius: (size + padding)/2,
             };
             const { fill, width, height, stroke, ...otherBackgroundAttrs } = { ...defaultBackground, ...background };
-            const labelBackgroundShape = group.addShape('rect', {
+            const iconBackgroundShape = group.addShape('rect', {
               attrs: {
-                id: 'label-background',
+                id: 'icon-background' + offsetX,
                 x: -width / 2,
-                y: -height / 2,
+                y: -height / 2 + offsetY,
                 width,
                 height,
                 fill,
@@ -384,12 +385,12 @@ export default () => {
                 ...otherBackgroundAttrs,
               },
               draggable: true,
-              name: 'label-background',
+              name: 'icon-background',
             });
 
             /** 处理标签自动旋转问题 */
-            labelBackgroundShape.rotate(degree);
-            labelBackgroundShape.translate(midPosition[0], midPosition[1]);
+            iconBackgroundShape.rotate(degree);
+            iconBackgroundShape.translate(midPosition[0], midPosition[1]);
           }
           /** 设置字体图标 */
           let iconShape = null

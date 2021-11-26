@@ -53,11 +53,11 @@ export default () => {
         width,
         height,
         animation,
-        done: () => {
-          done(graph);
-        },
         ...others,
         ...layoutConfig,
+        done: nodes => {
+          done(graph, nodes);
+        },
       });
 
       // 2. Mount Data

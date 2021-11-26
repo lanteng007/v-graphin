@@ -11,13 +11,15 @@ class ForceLayout {
 
   sourceData;
 
-  nodes = [];
+  nodes;
 
-  edges = [];
+  edges;
 
-  nodeSet = {};
+  nodeSet;
 
-  edgeSet = {};
+  edgeSet;
+
+  renderNodes;
 
   nodePoints;
 
@@ -80,6 +82,7 @@ class ForceLayout {
     this.edges = [];
     this.nodeSet = {};
     this.edgeSet = {};
+    this.renderNodes = [];
     this.nodePoints = new Map();
     this.edgeSprings = new Map();
     this.registers = new Map();
@@ -205,7 +208,9 @@ class ForceLayout {
       this.iterations++;
     }
     this.render();
-    done && done(); // eslint-disable-line
+    if (done) {
+      done(this.renderNodes);
+    }
   };
 
   /** polyfill: support webworker requestAnimationFrame */
@@ -256,7 +261,7 @@ class ForceLayout {
         if (this.averageDistance < minDistanceThreshold) {
           this.render();
           if (done) {
-            done();
+            done(this.renderNodes);
           }
           return;
         }
@@ -283,7 +288,7 @@ class ForceLayout {
         this.iterations = 0;
         this.done = true;
         if (done) {
-          done();
+          done(this.renderNodes);
         }
       } else {
         this.timer = this.requestAnimationFrame(step);
@@ -294,9 +299,8 @@ class ForceLayout {
 
   render = () => {
     const render = this.registers.get('render');
-    const nodes = [];
     this.nodePoints.forEach(node => {
-      nodes.push({
+      this.renderNodes.push({
         ...(this.nodeSet[node.id] && this.nodeSet[node.id].data),
         x: node.p.x,
         y: node.p.y,
@@ -305,7 +309,7 @@ class ForceLayout {
 
     if (render) {
       render({
-        nodes,
+        nodes: this.renderNodes,
         edges: this.sourceData.edges,
       });
     } else {
@@ -414,7 +418,8 @@ class ForceLayout {
         },
       };
 
-      const degree = node.data && node.data.layout ? node.data.layout.degree : undefined;
+      // const degree = node.data && node.data.layout ? node.data.layout.degree : undefined;
+      const { degree, sDegree, tDegree } = node.data.layout;
       let { centripetalOptions } = this.props;
       const { leafCluster, nodeClusterBy, clusterNodeStrength } = this.props;
       // 如果传入了需要叶子节点聚类
@@ -480,7 +485,8 @@ class ForceLayout {
       const single = typeof propsSingle === 'function' ? propsSingle(node) : propsSingle;
       const others = typeof propsOthers === 'function' ? propsOthers(node) : propsOthers;
       const centerVector = new Vector(x, y);
-      const leafNode = degree === 1;
+      // 没有出度或没有入度，都认为是叶子节点
+      const leafNode = tDegree === 0 || sDegree === 0;
       const singleNode = degree === 0;
       /** 如果radio为0，则认为忽略向心力 */
       if (leaf === 0 || single === 0 || others === 0) {

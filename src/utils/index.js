@@ -12,6 +12,7 @@ import uuid from './uuid';
 import walk from './walk';
 import subLayout from './subLayout';
 import { layouts } from '../layout/utils/options';
+import { uniqBy } from './array';
 
 export default {
   hexToRgba,
@@ -28,4 +29,5 @@ export default {
   processEdges,
   subLayout,
   layouts,
+  uniqBy,
 };

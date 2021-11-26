@@ -206,6 +206,7 @@ const drawBadge = (badge, group, r) => {
     fontFamily,
     padding = 0,
     offset: inputOffset = [0, 0],
+    id
   } = badge;
 
   const offset = convertSizeToWH(inputOffset);
@@ -218,16 +219,22 @@ const drawBadge = (badge, group, r) => {
   // 绘制 badge 的外层容器，根据宽度和高度确定是 circle 还是 rect
 
   if (width === height) {
-    group.addShape('circle', {
+    realX += offset[0];
+    realY += offset[1];
+    const shape = {
       attrs: {
         r: width / 2 + padding,
         fill,
         stroke,
-        x: realX + offset[0],
-        y: realY + offset[1],
+        x: realX,
+        y: realY,
       },
       name: 'badges-circle',
-    });
+    }
+    if(id) {
+      shape.id = id;
+    }
+    group.addShape('circle', shape);
   } else {
     realX = badgeX - width - padding * 2;
     realY = badgeY - height - padding * 2;
@@ -244,7 +251,7 @@ const drawBadge = (badge, group, r) => {
 
     realX += offset[0];
     realY += offset[1];
-    group.addShape('rect', {
+    const shape = {
       attrs: {
         width: width + padding * 2,
         height: height + padding * 2,
@@ -255,7 +262,11 @@ const drawBadge = (badge, group, r) => {
         radius: (height + padding * 2) / 3,
       },
       name: 'badges-rect',
-    });
+    }
+    if (id) {
+      shape.id = id;
+    }
+    group.addShape('rect', shape);
   }
 
   if (type === 'font' || type === 'text') {
