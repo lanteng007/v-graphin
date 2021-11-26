@@ -358,7 +358,6 @@ export default () => {
         if (hasIcon) {
           const { type, size, background } = icon
           const hasBackground = Boolean(background);
-          const [offsetX, offsetY] = offset;
           /** 设置字体图标的背景 */
           if (hasBackground) {
             const calcWidth = size;
@@ -375,9 +374,9 @@ export default () => {
             const { fill, width, height, stroke, ...otherBackgroundAttrs } = { ...defaultBackground, ...background };
             const iconBackgroundShape = group.addShape('rect', {
               attrs: {
-                id: 'icon-background' + offsetX,
+                id: 'icon-background',
                 x: -width / 2,
-                y: -height / 2 + offsetY,
+                y: -height / 2,
                 width,
                 height,
                 fill,
