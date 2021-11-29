@@ -1,6 +1,6 @@
 {
   "name": "v-graphin",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": false,
   "description": "Graphin的vue实现",
   "main": "lib/index.umd.min.js",
@@ -18,7 +18,7 @@
     "lib": "vue-cli-service build --target lib --name index --dest lib src/index.js"
   },
   "dependencies": {
-    "@antv/g6": "^4.3.11",
+    "@antv/g6": "^4.5.0",
     "core-js": "^3.6.5",
     "lodash.clonedeep": "^4.5.0",
     "vue": "^2.6.11"
