@@ -56,8 +56,13 @@ export default {
     if (this.disabled) {
       return;
     }
+    const { type, trigger, activeState, inactiveState, resetSelected } = this
     const config = {
-      ...this
+      type,
+      trigger,
+      activeState,
+      inactiveState,
+      resetSelected
     }
     this.graph.addBehaviors(config, this.mode);
   },

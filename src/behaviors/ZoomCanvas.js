@@ -65,8 +65,15 @@ export default {
     if (this.disabled) {
       return;
     }
+    const { type, sensitivity, minZoom, maxZoom, enableOptimize, optimizeZoom, fixSelectedItems } = this
     const config = {
-      ...this
+      type,
+      sensitivity,
+      minZoom,
+      maxZoom,
+      enableOptimize,
+      optimizeZoom,
+      fixSelectedItems
     }
     this.graph.addBehaviors(config, this.mode);
   },

@@ -44,7 +44,6 @@ export default {
       default: true,
     },
     /** 是否禁用该功能 */
-    /** 是否禁用该功能 */
     disabled: {
       type: Boolean,
       default: false,
@@ -66,8 +65,16 @@ export default {
     if (this.disabled) {
       return;
     }
+    const { type, delegateStyle, onSelect, onDeselect, selectedState, trigger, includeEdges } = this
+
     const config = {
-      ...this
+      type,
+      delegateStyle,
+      onSelect,
+      onDeselect,
+      selectedState,
+      trigger,
+      includeEdges
     }
     this.graph.addBehaviors(config, this.mode);
   },

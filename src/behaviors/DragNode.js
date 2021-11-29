@@ -74,8 +74,15 @@ export default {
     if (this.disabled) {
       return;
     }
+    const { type, updateEdge, delegateStyle, enableDelegate, onlyChangeComboSize, comboActiveState, selectedState } = this
     const config = {
-      ...this
+      type,
+      updateEdge,
+      delegateStyle,
+      enableDelegate,
+      onlyChangeComboSize,
+      comboActiveState,
+      selectedState
     }
     this.graph.addBehaviors(config, this.mode);
   },

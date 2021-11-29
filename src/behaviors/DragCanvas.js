@@ -56,8 +56,14 @@ export default {
     if (this.disabled) {
       return;
     }
+    const { type, direction, enableOptimize, scalableRange, shouldBegin, allowDragOnItem } = this
     const config = {
-      ...this
+      type,
+      direction,
+      enableOptimize,
+      scalableRange,
+      shouldBegin,
+      allowDragOnItem
     }
     this.graph.addBehaviors(config, this.mode);
   },
