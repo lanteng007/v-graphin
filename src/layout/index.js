@@ -131,7 +131,7 @@ class LayoutController {
     if (FORCE_LAYOUTS.indexOf(type) !== -1) {
       // 布局切换产生的prevType 是最低优先级
       let presetType = this.prevOptions.type || 'grid';
-      if (preset.type) {
+      if (preset && preset.type) {
         // 用户给的preset.type是第一优先级
         presetType = preset.type;
       }
