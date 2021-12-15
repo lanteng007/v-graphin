@@ -19,14 +19,14 @@ export const setStatusStyle = (shapes, statusStyle, parseAttr) => {
       if (style) {
         const { animate, visible, ...otherAttrs } = parseAttr(statusStyle, itemShapeName);
         // eslint-disable-next-line no-empty
-        if (!shapeItem.attrs.img) {
-          shapeItem.attr(otherAttrs);
-          shapeItem.cfg.visible = visible !== false;
-          if (animate) {
-            const { attrs, ...animateOptions } = animate;
-            shapeItem.animate(attrs, animateOptions);
-          }
+        // if (!shapeItem.attrs.img) {
+        shapeItem.attr(otherAttrs);
+        shapeItem.cfg.visible = visible !== false;
+        if (animate) {
+          const { attrs, ...animateOptions } = animate;
+          shapeItem.animate(attrs, animateOptions);
         }
+        // }
       }
     });
   } catch (error) {

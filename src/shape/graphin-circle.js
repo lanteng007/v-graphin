@@ -3,6 +3,7 @@ import G6 from '@antv/g6';
 import { deepMix, isArray, isNumber } from '@antv/util';
 import { getDefaultStyleByTheme } from '../theme';
 import { convertSizeToWH, getBadgePosition, getLabelXYByPosition, removeDumpAttrs, setStatusStyle } from './utils';
+import deepEqual from "../utils/deepEqual";
 
 function getRadiusBySize(size) {
   let r;
@@ -192,6 +193,29 @@ const parseAttr = (style, itemShapeName) => {
 
   return style[itemShapeName] || {};
 };
+const drawIcon = (group, icon, style) => {
+  const { type } = icon;
+  if (type === 'text' || type === 'font') {
+    group.addShape('text', parseIcon(style));
+  }
+  if (type === 'image') {
+    const imageAttrs = parseIcon(style);
+    const imageShape = group.addShape('image', imageAttrs);
+    const { clip } = style.icon;
+    if (clip) {
+      const { r, ...clipStyle } = clip;
+      imageShape.setClip({
+        type: 'circle',
+        attrs: {
+          x: 0,
+          y: 0,
+          r,
+          ...clipStyle,
+        },
+      });
+    }
+  }
+}
 
 const drawBadge = (badge, group, r) => {
   const {
@@ -329,27 +353,7 @@ export default () => {
 
       // keyShape 中间的 icon
 
-      const { type } = icon;
-      if (type === 'text' || type === 'font') {
-        group.addShape('text', parseIcon(style));
-      }
-      if (type === 'image') {
-        const imageAttrs = parseIcon(style);
-        const imageShape = group.addShape('image', imageAttrs);
-        const { clip } = style.icon;
-        if (clip) {
-          const { r, ...clipStyle } = clip;
-          imageShape.setClip({
-            type: 'circle',
-            attrs: {
-              x: 0,
-              y: 0,
-              r,
-              ...clipStyle,
-            },
-          });
-        }
-      }
+      drawIcon(group, icon, style)
 
       // badges 会存在多个的情况
       badges.forEach(badge => {
