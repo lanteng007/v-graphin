@@ -2,9 +2,8 @@
 import G6 from '@antv/g6';
 import { deepMix, isArray, isNumber } from '@antv/util';
 import { getDefaultStyleByTheme } from '../theme';
-import { convertSizeToWH, getBadgePosition, getLabelXYByPosition, removeDumpAttrs, setStatusStyle } from './utils';
-import deepEqual from "../utils/deepEqual";
-
+import { convertSizeToWH, getBadgePosition, getLabelXYByPosition, removeDumpAttrs, setStatusStyle, getPolygonPointsByNumAndSize } from './utils';
+const polygonTypes = ['triangle','rhombus','pentagon','hexagon']
 function getRadiusBySize(size) {
   let r;
   if (isNumber(size)) {
@@ -13,6 +12,188 @@ function getRadiusBySize(size) {
     r = size[0] / 2;
   }
   return r;
+}
+const getKeyshapeAttrs = (keyshape) => {
+  const { type = 'circle', size, visible, stroke, fill, fillOpacity, strokeOpacity, ...otherAttrs } = keyshape;
+
+  let attrs = {
+    cursor: 'pointer',
+    visible: visible !== false,
+    stroke,
+    strokeOpacity: strokeOpacity || 1,
+    fill: fill || stroke,
+    fillOpacity: fillOpacity || 0.2,
+    ...otherAttrs,
+  };
+  if (type === 'circle') {
+    const r = getRadiusBySize(size);
+    attrs = {
+      ...attrs,
+      x: 0,
+      y: 0,
+      r
+    };
+  } else if (type === 'rect') {
+    const [width, height] = convertSizeToWH(size)
+    attrs = {
+      ...attrs,
+      x: - width / 2,
+      y: - height / 2,
+      width,
+      height,
+    };
+  } else if(type === 'triangle') {
+    const points = getPolygonPointsByNumAndSize(3,size)
+    attrs = {
+      ...attrs,
+      points
+    };
+  } else if (type === 'rhombus') {
+    const points = getPolygonPointsByNumAndSize(4,size)
+    attrs = {
+      ...attrs,
+      points
+    };
+  } else if (type === 'pentagon') {
+    const points = getPolygonPointsByNumAndSize(5,size)
+    attrs = {
+      ...attrs,
+      points
+    };
+  } else if(type === 'hexagon') {
+    const points = getPolygonPointsByNumAndSize(6,size)
+    attrs = {
+      ...attrs,
+      points
+    };
+  }
+  return attrs
+}
+const getIconAttrs = (icon) => {
+  const {
+    value = '',
+    type,
+    fontFamily,
+    textAlign = 'center',
+    textBaseline = 'middle',
+    fill,
+    size,
+    visible,
+    // eslint-disable-next-line no-unused-vars
+    clip, // clip字段是保留的，放入attrs中会引起报错
+    ...otherAttrs
+  } = icon;
+  let attrs = {}
+  const [width, height] = convertSizeToWH(size);
+  if (type === 'text' || type === 'font') {
+    attrs = {
+      x: 0,
+      y: 0,
+      textAlign,
+      textBaseline,
+      text: value,
+      fontSize: width,
+      fontFamily,
+      fill,
+      visible: visible !== false,
+      ...otherAttrs,
+    }
+  } else {
+    attrs = {
+      x: - width / 2,
+      y: - height / 2,
+      img: value,
+      width,
+      height,
+      visible: visible !== false,
+      ...otherAttrs,
+    }
+  }
+  return attrs
+}
+const getHaloAttrs = (style) => {
+  const { halo, keyshape } = style;
+
+  const { size, visible, fill, fillOpacity, ...otherAttrs } = halo;
+  const { type = 'circle' } = keyshape
+
+  let keyshapeFill;
+  let keyshapeStroke;
+
+  if (keyshape && keyshape.fill) {
+    keyshapeFill = keyshape.fill;
+  }
+  if (keyshape && keyshape.stroke) {
+    keyshapeStroke = keyshape.stroke;
+  }
+
+  let attrs = {
+    fillOpacity: fillOpacity || 0.1,
+    fill: fill || keyshapeFill || keyshapeStroke,
+    visible: visible !== false,
+    ...otherAttrs,
+  };
+  if(type === 'circle') {
+    const haloR = getRadiusBySize(size);
+
+    let keyshapeR;
+
+    if (keyshape && keyshape.size) {
+      const calculateR = getRadiusBySize(keyshape.size);
+      keyshapeR = calculateR + 15;
+    }
+    
+    attrs = {
+      ...attrs,
+      x: 0,
+      y: 0,
+      r: haloR || keyshapeR, // 默认 halo的样式和keyshape相关 
+    r: haloR || keyshapeR, // 默认 halo的样式和keyshape相关
+      r: haloR || keyshapeR, // 默认 halo的样式和keyshape相关 
+    r: haloR || keyshapeR, // 默认 halo的样式和keyshape相关
+      r: haloR || keyshapeR, // 默认 halo的样式和keyshape相关 
+    }
+  } else if(type === 'rect') {
+    const [width, height] = convertSizeToWH(keyshape.size)
+    const keyshapeWidth = width + 20;
+    const keyshapeHeight = height + 20;
+    attrs = {
+      ...attrs,
+      x: - keyshapeWidth / 2,
+      y: - keyshapeHeight / 2,
+      width: keyshapeWidth,
+      height: keyshapeHeight
+    }
+  } else if(type === 'triangle') {
+    const a = size || keyshape.size  + 30
+    const points = getPolygonPointsByNumAndSize(3,a)
+    attrs = {
+      ...attrs,
+      points
+    };
+  } else if(type === 'rhombus') {
+    const a = size || keyshape.size  + 30
+    const points = getPolygonPointsByNumAndSize(4,a)
+    attrs = {
+      ...attrs,
+      points
+    };
+  } else if(type === 'pentagon') {
+    const a = size || keyshape.size  + 30
+    const points = getPolygonPointsByNumAndSize(5,a)
+    attrs = {
+      ...attrs,
+      points
+    };
+  } else if(type === 'hexagon') {
+    const a = size || keyshape.size  + 30
+    const points = getPolygonPointsByNumAndSize(6,a)
+    attrs = {
+      ...attrs,
+      points
+    };
+  }
+  return attrs;
 }
 
 const getStyleByTheme = (theme = {}) => {
@@ -29,36 +210,12 @@ const getStyleByTheme = (theme = {}) => {
  * @param config 用户输入的数据
  */
 const parseHalo = (style) => {
-  const { halo, keyshape } = style;
+  const { halo } = style;
 
-  const { size, visible, fill, fillOpacity, ...otherAttrs } = halo;
+  const { visible } = halo;
 
-  const haloR = getRadiusBySize(size);
+  const attrs = getHaloAttrs(style);
 
-  let keyshapeR;
-  let keyshapeFill;
-  let keyshapeStroke;
-
-  if (keyshape && keyshape.size) {
-    const calculateR = getRadiusBySize(keyshape.size);
-    keyshapeR = calculateR + 15;
-  }
-  if (keyshape && keyshape.fill) {
-    keyshapeFill = keyshape.fill;
-  }
-  if (keyshape && keyshape.stroke) {
-    keyshapeStroke = keyshape.stroke;
-  }
-
-  const attrs = {
-    x: 0,
-    y: 0,
-    r: haloR || keyshapeR, // 默认 halo的样式和keyshape相关
-    fill: fill || keyshapeFill || keyshapeStroke,
-    fillOpacity: fillOpacity || 0.1,
-    visible: visible !== false,
-    ...otherAttrs,
-  };
   return {
     name: 'halo',
     visible: visible !== false,
@@ -68,21 +225,10 @@ const parseHalo = (style) => {
 
 const parseKeyshape = (style) => {
   const { keyshape } = style;
-  const { size, visible, stroke, fill, fillOpacity, strokeOpacity, ...otherAttrs } = keyshape;
+  const { visible } = keyshape;
 
-  const r = getRadiusBySize(size);
-  const attrs = {
-    x: 0,
-    y: 0,
-    r,
-    cursor: 'pointer',
-    visible: visible !== false,
-    stroke,
-    strokeOpacity: strokeOpacity || 1,
-    fill: fill || stroke,
-    fillOpacity: fillOpacity || 0.2,
-    ...otherAttrs,
-  };
+  // const r = getRadiusBySize(size);
+  const attrs = getKeyshapeAttrs(keyshape);
   return {
     name: 'keyshape',
     visible: visible !== false,
@@ -119,59 +265,17 @@ const parseLabel = (style) => {
 const parseIcon = (style) => {
   const { icon } = style;
 
-  const {
-    value = '',
-    type,
-    fontFamily,
-    // @ts-ignore
-    textAlign = 'center',
-    // @ts-ignore
-    textBaseline = 'middle',
-    fill,
-    size,
-    visible,
-    // eslint-disable-next-line no-unused-vars
-    clip, // clip字段是保留的，放入attrs中会引起报错
-    ...otherAttrs
-  } = icon;
-
-  const [width, height] = convertSizeToWH(size);
+  const { visible } = icon;
 
   const params = {
     name: 'icon',
     visible: visible !== false,
     capture: false,
   };
-
-  if (type === 'text' || type === 'font') {
-    return {
-      ...params,
-      attrs: {
-        x: 0,
-        y: 0,
-        textAlign,
-        textBaseline,
-        text: value,
-        fontSize: width,
-        fontFamily,
-        fill,
-        visible: visible !== false,
-        ...otherAttrs,
-      },
-    };
-  }
-  // image
+  const attrs = getIconAttrs(icon)
   return {
     ...params,
-    attrs: {
-      x: -width / 2,
-      y: -height / 2,
-      img: value,
-      width,
-      height,
-      visible: visible !== false,
-      ...otherAttrs,
-    },
+    attrs,
   };
 };
 
@@ -255,7 +359,7 @@ const drawBadge = (badge, group, r) => {
       },
       name: 'badges-circle',
     }
-    if(id) {
+    if (id) {
       shape.id = id;
     }
     group.addShape('circle', shape);
@@ -341,11 +445,15 @@ export default () => {
 
       const r = getRadiusBySize(keyShapeStyle.size);
 
-      // halo 光晕
-      group.addShape('circle', parseHalo(style));
-
       // keyshape 主容器
-      const keyShape = group.addShape('circle', parseKeyshape(style));
+      // 默认是圆
+      let { type = 'circle' } = keyShapeStyle
+      type = polygonTypes.includes(type) ? 'polygon' : type
+
+      const keyShape = group.addShape(type, parseKeyshape(style, type));
+
+      // halo 光晕
+      group.addShape(type, parseHalo(style));
 
       // 文本
 
@@ -389,36 +497,36 @@ export default () => {
         console.error(error);
       }
     },
+    //暂时不考虑性能
+    // update(cfg, item) {
+    //   if (!cfg.style) return;
+    //   try {
+    //     const style = deepMix({}, cfg._initialStyle, cfg.style); // getStyles(cfg._initialStyle, cfg.style) as NodeStyle;
+    //     cfg._initialStyle = { ...style };
+    //     const { badges, keyshape } = style;
+    //     const r = getRadiusBySize(keyshape.size);
+    //     const group = item.getContainer();
+    //     const shapes = group.get('children');
+    //     setStatusStyle(shapes, style, parseAttr);
 
-    update(cfg, item) {
-      if (!cfg.style) return;
-      try {
-        const style = deepMix({}, cfg._initialStyle, cfg.style); // getStyles(cfg._initialStyle, cfg.style) as NodeStyle;
-        cfg._initialStyle = { ...style };
-        const { badges, keyshape } = style;
-        const r = getRadiusBySize(keyshape.size);
-        const group = item.getContainer();
-        const shapes = group.get('children');
-        setStatusStyle(shapes, style, parseAttr);
-
-        const copyShapes = [...shapes];
-        if (badges && badges.length > 0) {
-          let index = 0;
-          copyShapes.forEach(shape => {
-            if (shape.cfg.name.startsWith('badges')) {
-              shapes.splice(index, 1);
-            } else {
-              index = index + 1;
-            }
-          });
-          badges.forEach(badge => {
-            drawBadge(badge, group, r);
-          });
-        }
-      } catch (error) {
-        console.error('error');
-      }
-    },
+    //     const copyShapes = [...shapes];
+    //     if (badges && badges.length > 0) {
+    //       let index = 0;
+    //       copyShapes.forEach(shape => {
+    //         if (shape.cfg.name.startsWith('badges')) {
+    //           shapes.splice(index, 1);
+    //         } else {
+    //           index = index + 1;
+    //         }
+    //       });
+    //       badges.forEach(badge => {
+    //         drawBadge(badge, group, r);
+    //       });
+    //     }
+    //   } catch (error) {
+    //     console.error('error');
+    //   }
+    // },
     // eslint-disable-next-line 
   });
 };

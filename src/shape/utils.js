@@ -18,15 +18,22 @@ export const setStatusStyle = (shapes, statusStyle, parseAttr) => {
       const style = statusStyle[itemShapeName];
       if (style) {
         const { animate, visible, ...otherAttrs } = parseAttr(statusStyle, itemShapeName);
+
         // eslint-disable-next-line no-empty
-        // if (!shapeItem.attrs.img) {
-        shapeItem.attr(otherAttrs);
-        shapeItem.cfg.visible = visible !== false;
-        if (animate) {
-          const { attrs, ...animateOptions } = animate;
-          shapeItem.animate(attrs, animateOptions);
+        if (!shapeItem.attrs.img) {
+          // 保留原有坐标，默认重置为0，0
+          const { x, y } = shapeItem.attrs;
+          shapeItem.attr({ ...otherAttrs, x, y });
+          shapeItem.cfg.visible = visible !== false;
+          if (animate) {
+            const { attrs, ...animateOptions } = animate;
+            shapeItem.animate(attrs, animateOptions);
+          }
+        } else {
+          // 保留原有坐标,及宽高
+          const { x, y, width, height } = shapeItem.attrs;
+          shapeItem.attr({ ...otherAttrs, x, y, width, height });
         }
-        // }
       }
     });
   } catch (error) {
@@ -93,7 +100,7 @@ export const getLabelXYByPosition = (
 
   const { size } = keyshape;
 
-  let offsetArray= [0, 0];
+  let offsetArray = [0, 0];
   const { position: labelPosition, offset = offsetArray } = label;
   if (typeof offset === 'number' || typeof offset === 'string') {
     offsetArray = [Number(offset), Number(offset)];
@@ -181,3 +188,49 @@ export const getBadgePosition = (position = 'RT', r) => {
     y: badgeY,
   };
 };
+
+export const getPolygonPointsByNumAndSize = (num, size) => {
+  if (!num || !size) return [];
+  let points = [];
+  if (num === 3) {
+    // A (0,-✓3/3*a) B (-a/2,✓3/6*a) C (a/2,✓3/6*a) a为边长
+    const a = size;
+    const pointAY = Number(-(Math.sqrt(3) / 3 * a))
+    const pointA = [0, pointAY]
+    const pointBY = Number((Math.sqrt(3) / 6 * a))
+    const pointB = [-a / 2, pointBY]
+    const pointC = [a / 2, pointBY]
+    points = [pointA, pointB, pointC]
+  } else if (num === 4) {
+    // A (0,-✓2/2*a) B (-✓2/2*a,0) C (0,✓2/2*a) D (✓2/2*a,0) a为边长
+    const a = size;
+    const p = Number((Math.sqrt(2) / 2 * a))
+    const pointA = [0, -p];
+    const pointB = [-p, 0];
+    const pointC = [0, p];
+    const pointD = [p, 0];
+    points = [pointA, pointB, pointC, pointD]
+  } else if (num === 5) {
+    // A (a*Math.cos(1/10 * Math.PI),a*Math.sin(1/10 * Math.PI)) B (0,a) C (-a*Math.cos(1/10 * Math.PI),a*Math.sin(1/10 * Math.PI)) 
+    // D (-a*Math.sin(1/5 * Math.PI),-a*Math.cos(1/5 * Math.PI)) E (a*Math.sin(1/5 * Math.PI),-a*Math.cos(1/5 * Math.PI)) a 为原点到各点的长度，size/2
+    const a = size / 2;
+    const pointA = [a * Math.cos(1 / 10 * Math.PI), -a * Math.sin(1 / 10 * Math.PI)];
+    const pointB = [0, -a];
+    const pointC = [-a * Math.cos(1 / 10 * Math.PI), -a * Math.sin(1 / 10 * Math.PI)];
+    const pointD = [-a * Math.sin(1 / 5 * Math.PI), a * Math.cos(1 / 5 * Math.PI)];
+    const pointE = [a * Math.sin(1 / 5 * Math.PI), a * Math.cos(1 / 5 * Math.PI)];
+    points = [pointA, pointB, pointC, pointD, pointE]
+  } else if (num === 6) {
+    // A (0,-a) B (-✓3/2*a,-a/2) C (-✓3/2*a, a/2) D (0,a) E (✓3/2*a, a/2) F (✓3/2*a, -a/2) a 为原点到各点的长度，size/2
+    const a = size / 2;
+    const p = Number((Math.sqrt(3) / 2 * a))
+    const pointA = [0, -a];
+    const pointB = [-p, -a / 2];
+    const pointC = [-p, a / 2];
+    const pointD = [0, a];
+    const pointE = [p, a / 2];
+    const pointF = [p, -a / 2];
+    points = [pointA, pointB, pointC, pointD, pointE, pointF]
+  }
+  return points
+}
