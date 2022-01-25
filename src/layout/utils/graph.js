@@ -1,4 +1,5 @@
 import Utils from '../../utils/index';
+import Vector from '../force/Vector';
 
 const getDegree = (node, edges) => {
   const nodeId = node.id;
@@ -92,18 +93,32 @@ const getCoreNodeAndRelativeLeafNodes = (type = 'leaf' | 'all', node, edges, nod
   return { coreNode, relativeLeafNodes, sameTypeLeafNodes };
 };
 
-export const getMinDistanceNode = (sameTypeLeafNodes) => {
-  const xInfo = sameTypeLeafNodes.map(item => item.x);
-  const yInfo = sameTypeLeafNodes.map(item => item.y);
+export const getMinDistanceNode = (sameTypeNodes) => {
+  const xInfo = sameTypeNodes.map(item => item.x);
+  const yInfo = sameTypeNodes.map(item => item.y);
   const avgX = (Math.max.apply(null, xInfo) + Math.min.apply(null, xInfo)) / 2;
   const avgY = (Math.max.apply(null, yInfo) + Math.min.apply(null, yInfo)) / 2;
   // 计算节点和同类型节点平均位置节点的距离
   const getDistance = (x, y) => {
     return Math.sqrt((x - avgX) * (x - avgX) + (y - avgY) * (y - avgY));
   };
-  const distanceInfo = sameTypeLeafNodes.map(item => getDistance(item.x || 0, item.y || 0));
+  const distanceInfo = sameTypeNodes.map(item => getDistance(item.x || 0, item.y || 0));
   // 找出同类型节点平均位置节点的距离最近的节点
-  return sameTypeLeafNodes[distanceInfo.findIndex(item => item === Math.min.apply(null, distanceInfo))];
+  return sameTypeNodes[distanceInfo.findIndex(item => item === Math.min.apply(null, distanceInfo))];
+};
+
+// 获取节点集合的平均位置信息
+export const getAvgNodePosition = (nodes) => {
+  let totalNodes = new Vector(0, 0);
+  nodes.forEach(node => {
+    totalNodes = totalNodes.add(new Vector(node.x, node.y));
+  });
+  // 获取均值向量
+  const avgNode = totalNodes.divide(nodes.length).getvec();
+  return {
+    x: avgNode.x,
+    y: avgNode.y,
+  };
 };
 
 export default {

@@ -39,8 +39,8 @@ class ForceLayout {
   /** 向心力的中心点 */
   center;
 
-  /** 距离的总和 */
-  averageDistance;
+  /** 与 minDistanceThreshold 进行对比的判断停止迭代节点移动距离 */
+  judgingDistance;
 
   constructor(options) {
     this.props = {
@@ -55,6 +55,7 @@ class ForceLayout {
         single: 2,
       },
       leafCluster: false,
+      clustering: false,
       nodeClusterBy: 'cluster',
       clusterNodeStrength: 20,
       damping: 0.9,
@@ -66,6 +67,7 @@ class ForceLayout {
       /** 浏览器16ms刷新一次，1min = 1 * 60s = 1 * 60 * 1000ms = 1 * 60 * (1000ms / 16ms)次 = 3750次 */
       maxIterations: 7440,
       minDistanceThreshold: 0.4,
+      distanceThresholdMode: 'mean',
       animation: true,
       restartAnimation: true,
       width: 200,
@@ -87,13 +89,26 @@ class ForceLayout {
     this.edgeSprings = new Map();
     this.registers = new Map();
     this.done = false;
-    this.averageDistance = 0;
+    this.judgingDistance = 0;
 
     /** 计数器 */
     this.iterations = 0;
     this.nextEdgeId = 0; // 边属性计数自增
     this.timer = 0;
     this.center = new Vector(0, 0);
+    /** 默认的向心配置 */
+    this.centripetalOptions = {
+      leaf: 2,
+      single: 2,
+      others: 1,
+      // eslint-disable-next-line
+      center: (_node) => {
+        return {
+          x: this.props.width / 2,
+          y: this.props.height / 2,
+        };
+      },
+    };
   }
 
   /**
@@ -118,7 +133,7 @@ class ForceLayout {
     this.nodePoints = new Map();
     this.edgeSprings = new Map();
     this.sourceData = data;
-    this.averageDistance = 0;
+    this.judgingDistance = 0;
 
     // add nodes and edges
     if ('nodes' in data || 'edges' in data) {
@@ -146,6 +161,95 @@ class ForceLayout {
   init = () => {
     /** 初始化点和边的信息 */
     const { width, height } = this.props;
+
+    let { centripetalOptions } = this.props;
+    const { leafCluster, clustering, nodeClusterBy, clusterNodeStrength: propsClusterNodeStrength } = this.props;
+    const getClusterNodeStrength = (node) =>
+      typeof propsClusterNodeStrength === 'function' ? propsClusterNodeStrength(node) : propsClusterNodeStrength;
+
+    // 如果传入了需要叶子节点聚类
+    if (leafCluster) {
+      centripetalOptions = {
+        single: 100,
+        leaf: (node, nodes, edges) => {
+          const relativeNodesType = Utils.getRelativeNodesType(nodes, nodeClusterBy);
+          // 找出与它关联的边的起点或终点出发的所有一度节点中同类型的叶子节点
+          const { relativeLeafNodes, sameTypeLeafNodes } = Utils.getCoreNodeAndRelativeLeafNodes(
+            'leaf',
+            node,
+            edges,
+            nodeClusterBy,
+          );
+          // 如果都是同一类型或者每种类型只有1个，则施加默认向心力
+          if (sameTypeLeafNodes.length === relativeLeafNodes.length || relativeNodesType.length === 1) {
+            return 1;
+          }
+          return getClusterNodeStrength(node);
+        },
+        others: 1,
+        center: (node, nodes, edges) => {
+          const { degree } = node.data.layout || {};
+          // 孤点默认给1个远离的中心点
+          if (!degree) {
+            return {
+              x: 100,
+              y: 100,
+            };
+          }
+          let centerNode;
+          if (degree === 1) {
+            // 如果为叶子节点
+            // 找出与它关联的边的起点出发的所有一度节点中同类型的叶子节点
+            const { sameTypeLeafNodes } = Utils.getCoreNodeAndRelativeLeafNodes('leaf', node, edges, nodeClusterBy);
+            if (sameTypeLeafNodes.length === 1) {
+              // 如果同类型的叶子节点只有1个，中心节点置为undefined
+              centerNode = undefined;
+            } else if (sameTypeLeafNodes.length > 1) {
+              // 找出同类型节点平均位置节点的距离最近的节点作为中心节点
+              centerNode = Utils.getAvgNodePosition(sameTypeLeafNodes);
+            }
+          } else {
+            centerNode = undefined;
+          }
+          return {
+            x: centerNode.x,
+            y: centerNode.y,
+          };
+        },
+      };
+    }
+
+    // 如果传入了全局节点聚类
+    if (clustering) {
+      const clusters = Array.from(new Set(this.nodes.map(node => node.data[nodeClusterBy]))).filter(
+        item => item !== undefined,
+      );
+      const centerNodeInfo = {};
+      clusters.forEach(cluster => {
+        const sameTypeNodes = this.nodes.filter(item => item.data[nodeClusterBy] === cluster);
+        // 找出同类型节点平均位置节点的距离最近的节点作为中心节点
+        centerNodeInfo[cluster] = Utils.getAvgNodePosition(sameTypeNodes);
+      });
+
+      centripetalOptions = {
+        single: node => getClusterNodeStrength(node),
+        leaf: node => getClusterNodeStrength(node),
+        others: node => getClusterNodeStrength(node),
+        center: (node) => {
+          // 找出同类型节点平均位置节点的距离最近的节点作为中心节点
+          const centerNode = centerNodeInfo[node.data[nodeClusterBy]];
+          return {
+            x: centerNode.x,
+            y: centerNode.y,
+          };
+        },
+      };
+    }
+
+    this.centripetalOptions = {
+      ...this.centripetalOptions,
+      ...centripetalOptions,
+    };
 
     this.nodes.forEach(node => {
       const x = node.data.x || width / 2;
@@ -203,7 +307,7 @@ class ForceLayout {
 
   slienceForce = () => {
     const { done, maxIterations, minDistanceThreshold } = this.props;
-    for (let i = 0; (this.averageDistance > minDistanceThreshold || i < 1) && i < maxIterations; i++) {
+    for (let i = 0; (this.judgingDistance > minDistanceThreshold || i < 1) && i < maxIterations; i++) {
       this.tick(this.props.tickInterval);
       this.iterations++;
     }
@@ -258,7 +362,7 @@ class ForceLayout {
           monitor(this.reportMointor(energy));
         }
 
-        if (this.averageDistance < minDistanceThreshold) {
+        if (this.judgingDistance < minDistanceThreshold) {
           this.render();
           if (done) {
             done(this.renderNodes);
@@ -282,8 +386,7 @@ class ForceLayout {
         monitor(this.reportMointor(energy));
       }
 
-      // console.log('average', this.averageDistance);
-      if (this.averageDistance < minDistanceThreshold || this.iterations > this.props.maxIterations) {
+      if (this.judgingDistance < minDistanceThreshold || this.iterations > this.props.maxIterations) {
         this.cancelAnimationFrame(this.timer);
         this.iterations = 0;
         this.done = true;
@@ -403,88 +506,32 @@ class ForceLayout {
       point.updateAcc(direction.scalarMultip(-radio));
     };
     this.nodes.forEach(node => {
-      // 默认的向心力指向画布中心
-      /** 默认的向心力配置 */
-      const defaultRadio = {
-        leaf: 2,
-        single: 2,
-        others: 1,
-        // eslint-disable-next-line
-        center: (_node) => {
-          return {
-            x: this.props.width / 2,
-            y: this.props.height / 2,
-          };
-        },
-      };
-
-      // const degree = node.data && node.data.layout ? node.data.layout.degree : undefined;
       const { degree, sDegree, tDegree } = node.data.layout;
-      let { centripetalOptions } = this.props;
-      const { leafCluster, nodeClusterBy, clusterNodeStrength } = this.props;
-      // 如果传入了需要叶子节点聚类
-      if (leafCluster) {
-        centripetalOptions = {
-          single: 100,
-          leaf: (node, nodes, edges) => {
-            const relativeNodesType = Utils.getRelativeNodesType(nodes, nodeClusterBy);
-            // 找出与它关联的边的起点或终点出发的所有一度节点中同类型的叶子节点
-            const { relativeLeafNodes, sameTypeLeafNodes } = Utils.getCoreNodeAndRelativeLeafNodes(
-              'leaf',
-              node,
-              edges,
-              nodeClusterBy,
-            );
-            // 如果都是同一类型或者每种类型只有1个，则施加默认向心力
-            if (sameTypeLeafNodes.length === relativeLeafNodes.length || relativeNodesType.length === 1) {
-              return 1;
-            }
-            return clusterNodeStrength;
-          },
-          others: 1,
-          center: (node, nodes, edges) => {
-            const { degree } = node.data.layout || {};
-            // 孤点默认给1个远离的中心点
-            if (!degree) {
-              return {
-                x: 100,
-                y: 100,
-              };
-            }
-            let centerNode;
-            if (degree === 1) {
-              // 如果为叶子节点
-              // 找出与它关联的边的起点出发的所有一度节点中同类型的叶子节点
-              const { sameTypeLeafNodes } = Utils.getCoreNodeAndRelativeLeafNodes('leaf', node, edges, nodeClusterBy);
-              if (sameTypeLeafNodes.length === 1) {
-                // 如果同类型的叶子节点只有1个，中心节点置为undefined
-                centerNode = undefined;
-              } else if (sameTypeLeafNodes.length > 1) {
-                // 找出同类型节点平均位置节点的距离最近的节点作为中心节点
-                centerNode = Utils.getMinDistanceNode(sameTypeLeafNodes);
-              }
-            } else {
-              centerNode = undefined;
-            }
-            return {
-              x: centerNode.x,
-              y: centerNode.y,
-            };
-          },
-        };
-      }
-      const {
-        leaf: propsLeaf,
-        single: propsSingle,
-        others: propsOthers,
-        center,
-      } = { ...defaultRadio, ...centripetalOptions };
+
+      const { leaf: finalLeaf, single: finalSingle, others: finalOthers, center } = this.centripetalOptions;
+
       const { width, height } = this.props;
-      const { x, y } = center(node, this.nodes, this.edges, width, height);
-      const leaf = typeof propsLeaf === 'function' ? propsLeaf(node, this.nodes, this.edges) : propsLeaf;
-      const single = typeof propsSingle === 'function' ? propsSingle(node) : propsSingle;
-      const others = typeof propsOthers === 'function' ? propsOthers(node) : propsOthers;
+
+      if (center === undefined) {
+        return;
+      }
+
+      const { x, y, centerStrength } = center(node, this.nodes, this.edges, width, height);
+
+      if (x === undefined || y === undefined) {
+        return;
+      }
+
       const centerVector = new Vector(x, y);
+
+      if (centerStrength) {
+        implementForce(node, centerVector, centerStrength);
+        return;
+      }
+
+      const leaf = typeof finalLeaf === 'function' ? finalLeaf(node, this.nodes, this.edges) : finalLeaf;
+      const single = typeof finalSingle === 'function' ? finalSingle(node) : finalSingle;
+      const others = typeof finalOthers === 'function' ? finalOthers(node) : finalOthers;
       // 没有出度或没有入度，都认为是叶子节点
       const leafNode = tDegree === 0 || sDegree === 0;
       const singleNode = degree === 0;
@@ -492,6 +539,7 @@ class ForceLayout {
       if (leaf === 0 || single === 0 || others === 0) {
         return;
       }
+
       if (singleNode) {
         implementForce(node, centerVector, single);
         return;
@@ -521,14 +569,32 @@ class ForceLayout {
   };
 
   updatePosition = (interval) => {
+    if (!this.nodes.length) {
+      this.judgingDistance = 0;
+      return;
+    }
+    const { distanceThresholdMode } = this.props;
     let sum = 0;
+    if (distanceThresholdMode === 'max') this.judgingDistance = -Infinity;
+    else if (distanceThresholdMode === 'min') this.judgingDistance = Infinity;
     this.nodes.forEach(node => {
       const point = this.nodePoints.get(node.id);
-      const distance = point.v.scalarMultip(interval);
-      sum = sum + distance.magnitude();
       point.p = point.p.add(point.v.scalarMultip(interval)); // 路程公式 s = v * t
+      const distance = point.v.scalarMultip(interval);
+      const distanceMagnitude = distance.magnitude();
+      switch (distanceThresholdMode) {
+        case 'max':
+          if (this.judgingDistance < distanceMagnitude) this.judgingDistance = distanceMagnitude;
+          break;
+        case 'min':
+          if (this.judgingDistance > distanceMagnitude) this.judgingDistance = distanceMagnitude;
+          break;
+        default:
+          sum = sum + distanceMagnitude;
+          break;
+      }
     });
-    this.averageDistance = sum / this.nodes.length;
+    if (!distanceThresholdMode || distanceThresholdMode === 'mean') this.judgingDistance = sum / this.nodes.length;
   };
 
   /**

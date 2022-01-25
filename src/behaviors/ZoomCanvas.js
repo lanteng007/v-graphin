@@ -48,6 +48,18 @@ export default {
       type: Boolean,
       default: false,
     },
+    animate: {
+      type: Boolean,
+      default: false,
+    },
+    animateCfg: {
+      type: Object,
+      default() {
+        return {
+          duration: 500
+        }
+      }
+    } 
   },
   data() {
     return {
