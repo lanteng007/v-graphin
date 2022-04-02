@@ -1,6 +1,6 @@
 export default {
   name: 'DragNodeWithForce',
-  inject: ['graphin'],
+  inject: ['graphin','updateDragNodes'],
   props: {
     /**
      * @description 被拖拽的节点，是否自动固定住
@@ -11,6 +11,10 @@ export default {
       type: Boolean,
       default: false
     },
+    dragNodeMass: {
+      type: Number,
+      default: 10000000000
+    }
 
   },
   data() {
@@ -25,20 +29,21 @@ export default {
     layout() {
       return this.graphin.curlayout || {}
     },
+    dragNodes() {
+      return this.graphin.dragNodes
+    }
   },
   methods: {
     handleNodeDragStart() {
       const { instance } = this.layout;
       const { simulation } = instance;
-      console.log('drag-start', instance);
       if (simulation) {
         simulation.stop();
       }
     },
     handleNodeDragEnd(e) {
       const { instance } = this.layout;
-      const { simulation, type } = instance;
-      console.log(type)
+      const { type } = instance;
       if (type !== 'graphin-force') {
         return;
       }
@@ -50,12 +55,25 @@ export default {
         nodeModel.layout = {
           ...nodeModel.layout,
           force: {
-            mass: this.autoPin ? 1000000 : null,
+            mass: this.autoPin ? this.dragNodeMass : null,
           },
         };
-        const drageNodes = [nodeModel];
-        simulation.restart(drageNodes, this.graph);
-        this.graph.refreshPositions();
+        const selectedNodes = [];
+        this.graph.getNodes().forEach(node => {
+          if (node.hasState('selected')) {
+            const selectNodeModel = node.get('model');
+            selectNodeModel.layout.force = {
+              mass: this.autoPin ? this.dragNodeMass : null,
+            };
+            selectedNodes.push(selectNodeModel);
+          }
+        });
+        let newDragNodes = this.dragNodes.concat([nodeModel]);
+        // 多选拖动的场景
+        if (selectedNodes.length > 1) {
+          newDragNodes = newDragNodes.concat(selectedNodes);
+        }
+        this.updateDragNodes(newDragNodes);
       }
     }
   },

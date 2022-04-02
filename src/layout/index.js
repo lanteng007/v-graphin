@@ -40,6 +40,13 @@ class LayoutController {
   hasPosition() {
     const { graphin } = this;
     const { graphData = {} } = graphin;
+    // 若收到一个空数组，Array.prototype.every() 方法在一切情况下都会返回 true
+    if (!graphData.nodes) {
+      return false;
+    }
+    if (graphData.nodes.length === 0) {
+      return false;
+    }
     return graphData.nodes.every(node => !window.isNaN(Number(node.x)) && !window.isNaN(Number(node.y)));
   }
 
@@ -68,7 +75,12 @@ class LayoutController {
 
   /** 启动布局 */
   start() {
+    const { type } = this.options;
     this.instance.execute();
+    if (!(type === 'force' || type === 'g6force' || type === 'gForce' || type === 'comboCombined')) {
+      return
+    }
+    this.refreshPosition();
     this.graph.emit('afterlayout');
   }
 
@@ -151,45 +163,42 @@ class LayoutController {
   };
 
   processForce = () => {
-    const { options, graphin } = this;
+    const self = this;
+    const { options, graphin } = self;
     const { graph } = graphin;
     const { type } = options;
 
     if (type === 'graphin-force') {
-      this.options.graph = this.graph;
+      self.options.graph = self.graph;
     }
 
-    if (type === 'force' || type === 'g6force' || type === 'gForce') {
-      const { onTick } = this.options;
+    if (type === 'force' || type === 'g6force' || type === 'gForce' || type === 'comboCombined') {
+      const { onTick } = self.options;
       const tick = () => {
         if (onTick) {
           onTick();
         }
       };
 
-      this.options.tick = tick;
-      const { onLayoutEnd } = this.options;
-      this.options.onLayoutEnd = () => {
-        if (graph.get('animate')) {
-          graph.positionsAnimate();
-        } else {
-          graph.refreshPositions();
-        }
-        if (onLayoutEnd) {
+      self.options.tick = tick;
+      const { onLayoutEnd } = self.options;
+      self.options.onLayoutEnd = () => {
+        self.refreshPosition();
+        if(onLayoutEnd) {
           onLayoutEnd();
         }
         graph.emit('afterlayout');
       };
     }
-    if (this.type === 'comboForce') {
-      this.options.comboTrees = graph.get('comboTrees');
+    if (self.type === 'comboForce' || type === 'comboCombined') {
+      self.options.comboTrees = graph.get('comboTrees');
     }
 
     const isForceLayout = {
-      prev: FORCE_LAYOUTS.indexOf(this.prevOptions.type) !== -1,
-      current: FORCE_LAYOUTS.indexOf(this.options.type) !== -1,
+      prev: FORCE_LAYOUTS.indexOf(self.prevOptions.type) !== -1,
+      current: FORCE_LAYOUTS.indexOf(self.options.type) !== -1,
     };
-    const isSameLayoutType = this.options.type === this.prevOptions.type;
+    const isSameLayoutType = self.options.type === self.prevOptions.type;
     if (isEmpty(graphin.graphData)) {
       return;
     }
@@ -200,26 +209,26 @@ class LayoutController {
        * 应当设置当前布局的preset为前一个布局
        */
 
-      const { preset } = this.options;
-      this.presetLayout = new G6.Layout[preset.type]({ ...preset } || {});
-      this.presetLayout.init(graphin.graphData);
-      this.presetLayout.execute();
-      this.presetLayout.graphData = { ...graphin.graphData };
+      const { preset } = self.options;
+      self.presetLayout = new G6.Layout[preset.type]({ ...preset } || {});
+      self.presetLayout.init(graphin.graphData);
+      self.presetLayout.execute();
+      self.presetLayout.graphData = { ...graphin.graphData };
     }
 
-    if (isForceLayout.current && isForceLayout.prev && !this.hasPosition()) {
+    if (isForceLayout.current && isForceLayout.prev && !self.hasPosition()) {
       /**
        * 当前布局类型为force， 前一次布局也为force
        * 渐进布局
        * 不满足每个节点都有位置信息时才计算初始位置
        */
-      let prevData = this.graph.save(); // 必须从graph上取数据的原因是，用户可能拖拽改变数据
-      const { preset } = this.options;
+      let prevData = self.graph.save(); // 必须从graph上取数据的原因是，用户可能拖拽改变数据
+      const { preset } = self.options;
       if (isEmpty(prevData)) {
         // preset.type = 'grid';
-        this.presetLayout = new G6.Layout[preset.type]({ ...preset } || {});
-        this.presetLayout.init(graphin.graphData);
-        this.presetLayout.execute();
+        self.presetLayout = new G6.Layout[preset.type]({ ...preset } || {});
+        self.presetLayout.init(graphin.graphData);
+        self.presetLayout.execute();
         prevData = graphin.graphData;
       }
       graphin.graphData = Tweak(graphin.graphData, prevData);
@@ -229,12 +238,14 @@ class LayoutController {
   };
 
   refreshPosition = () => {
-    const { animate } = this.graphin.options;
+    const { graph, graphin } = this;
+    const { animate, layoutAnimate } = graphin.options;
+    const { type } = this.options;
 
-    if (animate) {
-      this.graph.positionsAnimate();
+    if (animate || layoutAnimate) {
+      graph.positionsAnimate(type === 'comboCombined');
     } else {
-      this.graph.refreshPositions();
+      graph.refreshPositions(type === 'comboCombined');
     }
   };
 
@@ -254,6 +265,7 @@ class LayoutController {
     const nodes = [];
     const edges = [];
     const combos = [];
+    const comboEdges = [];
     const nodeItems = this.graph.getNodes();
     const edgeItems = this.graph.getEdges();
     const comboItems = this.graph.getCombos();
@@ -274,6 +286,8 @@ class LayoutController {
         const model = edgeItem.getModel();
         if (!model.isComboEdge) {
           edges.push(model);
+        } else {
+          comboEdges.push(model);
         }
       }
     }
@@ -286,7 +300,7 @@ class LayoutController {
         combos.push(model);
       }
     }
-    return { nodes, edges, combos };
+    return { nodes, edges, combos, comboEdges };
   };
 
   /** restart */

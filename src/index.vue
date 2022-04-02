@@ -64,6 +64,9 @@ export default {
       setGraphinProperty: (property, value) => {
         this[property] = value
         this.graphin[property] = value
+      },
+      updateDragNodes: (payload)=> {
+        this.dragNodes = payload
       }
     };
   },
@@ -111,11 +114,13 @@ export default {
       apis: {},
       curtheme: {},
       isReady: false,
+      dragNodes: [],
       graphin: {
         graph: null,
         layout: {},
         apis: {},
         theme: {},
+        dragNodes: [],
         graphDOM: null
       }
     };
@@ -142,9 +147,26 @@ export default {
       /** 数据变化 */
       if (isDataChange) {
         this.initData(newValue);
-        this.curlayout.changeLayout();
+
+        const dragNodes = this.dragNodes;
+        // 更新拖拽后的节点的mass到data
+        this.graphData.nodes.forEach(node => {
+          const dragNode = dragNodes.find(item => item.id === node.id);
+          if (dragNode) {
+            node.layout = {
+              ...node.layout,
+              force: {
+                mass: (dragNode.layout && dragNode.layout.force) ? dragNode.layout.force.mass : 0,
+              },
+            };
+          }
+        });
         this.graph.data(this.graphData);
+        this.graph.set('layoutController', null);
         this.graph.changeData(this.graphData);
+
+        this.curlayout.changeLayout();
+
         this.initStatus();
         this.apis = ApiController(this.graph);
         this.setGraphin()
@@ -280,6 +302,9 @@ export default {
       });
       /** 装载数据 */
       this.graph.data(this.graphData);
+      /** 渲染 */
+      this.graph.render();
+
       /** 初始化布局：仅限网图 */
       if (!this.isTree) {
         this.curlayout = new LayoutController(this);
@@ -288,8 +313,7 @@ export default {
 
       // this.graph.get('canvas').set('localRefresh', true);
 
-      /** 渲染 */
-      this.graph.render();
+      
       /** FitView 变为组件可选 */
 
       /** 初始化状态 */
@@ -366,7 +390,7 @@ export default {
         theme: this.curtheme,
         graphDOM: this.graphDOM
       }
-    }
+    },
   },
 };
 </script>

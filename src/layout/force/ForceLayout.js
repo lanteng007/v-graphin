@@ -109,6 +109,7 @@ class ForceLayout {
         };
       },
     };
+    this.dragNodes = [];
   }
 
   /**
@@ -402,6 +403,7 @@ class ForceLayout {
 
   render = () => {
     const render = this.registers.get('render');
+    this.renderNodes = []
     this.nodePoints.forEach(node => {
       this.renderNodes.push({
         ...(this.nodeSet[node.id] && this.nodeSet[node.id].data),
@@ -674,7 +676,7 @@ class ForceLayout {
     this.registers.set(type, options); // 将用户的自定义函数注册进来
   };
 
-  restart = (dragNode, graph) => {
+  restart = (dragNodes, graph) => {
     /** 将位置更新到nodePoint中 */
     const { ignore } = this.props;
     graph.getNodes().forEach((nodeItem) => {
@@ -708,7 +710,7 @@ class ForceLayout {
     };
 
     // TODO:支持多点拖拽
-    dragNode.forEach(changeNodePosition);
+    dragNodes.forEach(changeNodePosition);
 
     if (this.props.restartAnimation) this.animation();
     else this.slienceForce();
