@@ -75,11 +75,11 @@ class LayoutController {
 
   /** 启动布局 */
   start() {
-    const { type } = this.options;
+    // const { type } = this.options;
     this.instance.execute();
-    if (!(type === 'force' || type === 'g6force' || type === 'gForce' || type === 'comboCombined')) {
-      return
-    }
+    // if (!(type === 'force' || type === 'g6force' || type === 'gForce' || type === 'comboCombined')) {
+    //   return
+    // }
     this.refreshPosition();
     this.graph.emit('afterlayout');
   }
