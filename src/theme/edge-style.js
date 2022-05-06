@@ -48,6 +48,7 @@ const getEdgeStyleByTheme = (inputTheme) => {
         fontSize: 12,
         textAlign: 'center',
       },
+      animate: {},
     },
     status: {
       hover: {

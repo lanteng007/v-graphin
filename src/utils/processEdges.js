@@ -1,4 +1,4 @@
-import { deepMix } from '@antv/util';
+// import { deepMix } from '@antv/util';
 
 function isEven(number) {
   return number % 2 === 0;
@@ -16,14 +16,16 @@ function isOdd(number) {
 const processEdges = (
   edges,
   {
-    poly = 50,
+    poly = 30,
     loop = 10,
   },
 ) => {
   const edgesMap = {};
-  edges.forEach(edge => {
+  edges.forEach((item, index) => {
+    const edge = { ...item };
     const { source, target } = edge;
     const edgeId = `${source}-${target}`;
+    edge.id = edge.id || `${source}-${target}-${index}`;
     const revertEdgeId = `${target}-${source}`;
     /** 存储edge */
     if (edgesMap[edgeId]) {
@@ -85,11 +87,14 @@ const processEdges = (
           };
         }
 
-        deepMix(edge, {
-          style: {
-            keyshape: keyshapeStyle,
+        edge.style = {
+          ...edge.style,
+          keyshape: {
+            ...edge.style.keyshape,
+            ...keyshapeStyle,
           },
-        });
+        };
+        edge.isMultiple = true;
 
         newEdges.push(edge);
       });

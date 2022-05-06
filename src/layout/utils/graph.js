@@ -1,5 +1,5 @@
 import Utils from '../../utils/index';
-import Vector from '../force/Vector';
+// import Vector from '../force/Vector';
 
 const getDegree = (node, edges) => {
   const nodeId = node.id;
@@ -88,7 +88,7 @@ const getCoreNodeAndRelativeLeafNodes = (type = 'leaf' | 'all', node, edges, nod
     coreNode = getCoreNode('target', node, edges);
     relativeLeafNodes = getRelativeNodes('both', coreNode, edges);
   }
-  relativeLeafNodes = relativeLeafNodes.filter(node => node.data.layout.sDegree === 0 || node.data.layout.tDegree === 0);
+  relativeLeafNodes = relativeLeafNodes.filter(node => node.data.layout && (node.data.layout.sDegree === 0 || node.data.layout.tDegree === 0));
   const sameTypeLeafNodes = getSameTypeNodes(type, nodeClusterBy, node, relativeLeafNodes);
   return { coreNode, relativeLeafNodes, sameTypeLeafNodes };
 };
@@ -109,15 +109,16 @@ export const getMinDistanceNode = (sameTypeNodes) => {
 
 // 获取节点集合的平均位置信息
 export const getAvgNodePosition = (nodes) => {
-  let totalNodes = new Vector(0, 0);
+  let totalNodes = { x: 0, y: 0 };
   nodes.forEach(node => {
-    totalNodes = totalNodes.add(new Vector(node.x, node.y));
+    totalNodes.x += node.x || 0;
+    totalNodes.y += node.y || 0;
   });
   // 获取均值向量
-  const avgNode = totalNodes.divide(nodes.length).getvec();
+  const length = nodes.length || 1;
   return {
-    x: avgNode.x,
-    y: avgNode.y,
+    x: totalNodes.x / length,
+    y: totalNodes.y / length,
   };
 };
 

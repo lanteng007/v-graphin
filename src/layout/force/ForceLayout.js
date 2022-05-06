@@ -168,19 +168,41 @@ class ForceLayout {
     const getClusterNodeStrength = (node) =>
       typeof propsClusterNodeStrength === 'function' ? propsClusterNodeStrength(node) : propsClusterNodeStrength;
 
+    let sameTypeLeafMap;
+
+    this.nodes.forEach(node => {
+      const x = node.data.x || width / 2;
+      const y = node.data.y || height / 2;
+      const vec = new Vector(x, y);
+
+      if (!node.data.layout) {
+        node.data.layout = {};
+      }
+      const degreeInfo = Utils.getDegree(node, this.edges);
+      node.data.layout = {
+        ...node.data.layout,
+        ...degreeInfo,
+      };
+      const mass = this.getMass(node.data);
+      this.nodePoints.set(node.id, new Point(vec, String(node.id), node.data, mass));
+    });
+    this.edges.forEach(edge => {
+      const source = this.nodePoints.get(edge.source.id);
+      const target = this.nodePoints.get(edge.target.id);
+      const length = this.props.defSpringLen(edge, source, target);
+      this.edgeSprings.set(edge.id, new Spring(source, target, length));
+    });
+
     // 如果传入了需要叶子节点聚类
     if (leafCluster) {
+      sameTypeLeafMap = this.getSameTypeLeafMap();
+      const relativeNodesType = Utils.getRelativeNodesType(this.nodes, nodeClusterBy);
       centripetalOptions = {
         single: 100,
-        leaf: (node, nodes, edges) => {
-          const relativeNodesType = Utils.getRelativeNodesType(nodes, nodeClusterBy);
+        leaf: (node) => {
+
           // 找出与它关联的边的起点或终点出发的所有一度节点中同类型的叶子节点
-          const { relativeLeafNodes, sameTypeLeafNodes } = Utils.getCoreNodeAndRelativeLeafNodes(
-            'leaf',
-            node,
-            edges,
-            nodeClusterBy,
-          );
+          const { relativeLeafNodes, sameTypeLeafNodes } = sameTypeLeafMap[node.id] || {};
           // 如果都是同一类型或者每种类型只有1个，则施加默认向心力
           if (sameTypeLeafNodes.length === relativeLeafNodes.length || relativeNodesType.length === 1) {
             return 1;
@@ -222,6 +244,7 @@ class ForceLayout {
 
     // 如果传入了全局节点聚类
     if (clustering) {
+      if (!sameTypeLeafMap) sameTypeLeafMap = this.getSameTypeLeafMap();
       const clusters = Array.from(new Set(this.nodes.map(node => node.data[nodeClusterBy]))).filter(
         item => item !== undefined,
       );
@@ -251,33 +274,6 @@ class ForceLayout {
       ...this.centripetalOptions,
       ...centripetalOptions,
     };
-
-    this.nodes.forEach(node => {
-      const x = node.data.x || width / 2;
-      const y = node.data.y || height / 2;
-      const vec = new Vector(x, y);
-
-      if (!node.data.layout) {
-        node.data.layout = {};
-      }
-      const degreeInfo = Utils.getDegree(node, this.edges);
-      node.data.layout = {
-        ...node.data.layout,
-        ...degreeInfo,
-      };
-
-      const mass = this.getMass(node.data);
-
-      this.nodePoints.set(node.id, new Point(vec, String(node.id), node.data, mass));
-    });
-
-    this.edges.forEach(edge => {
-      const source = this.nodePoints.get(edge.source.id);
-      const target = this.nodePoints.get(edge.target.id);
-      const length = this.props.defSpringLen(edge, source, target);
-
-      this.edgeSprings.set(edge.id, new Spring(source, target, length));
-    });
 
     /** 其他参数设置 */
     const { size } = this.nodePoints;
